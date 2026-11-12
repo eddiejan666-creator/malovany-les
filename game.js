@@ -298,6 +298,7 @@ function refreshMarkers(){
   for(const k in markers)markers[k].visible=false;
   for(const t of seasonTasks(st.season)){const m=markers[t.place],d=!!st.done[t.id],c=C(d?'#f4b72e':t.color);m.visible=true;
     m.userData.beam.material.color.copy(c);m.userData.beam.material.opacity=d?0.18:0.5;m.userData.gem.material.color.copy(c);m.userData.gem.material.emissive.copy(c);m.userData.done=d;}
+  refreshGuide();
 }
 function refreshProps(){
   const s=st.season;
@@ -308,6 +309,79 @@ function refreshProps(){
   animals.v.visible=animals.z.visible=s!==3||!!st.done.hadanky;animals.j.visible=s!==3;
   sapling.visible=!!st.done.seminko;sapling.scale.setScalar(s===0?0.8:1.15);
   berriesG.visible=s===1;
+}
+
+/* ---------- Zajdík shows the way to the next task ----------
+   First task of a season: one Zajdík runs ahead and calls her. Second task: Zajdíci sit along the way like trail ribbons. */
+const bubbleEl=$('bubble');
+const guide={mode:null,task:null,leader:makeZajdik(),trail:[],say:null,sayT:0,waitT:0,greet:false,arrived:false,ph:0,heading:0};
+guide.leader.scale.setScalar(1.5);guide.leader.visible=false;scene.add(guide.leader);
+for(let i=0;i<8;i++){const z=makeZajdik();z.scale.setScalar(1.4);z.visible=false;scene.add(z);guide.trail.push({z,on:false,seen:false,hop:0,last:false});}
+function pose(z,sit){const u=z.userData;u.inner.position.y=sit?-0.36:0;u.legL.rotation.x=u.legR.rotation.x=sit?-1.45:0;
+  u.legL.rotation.z=sit?-0.25:0;u.legR.rotation.z=sit?0.25:0;u.armL.rotation.z=-0.25;u.armR.rotation.z=0.25;}
+function zsay(obj,text,dur){guide.say={obj};guide.sayT=dur;bubbleEl.textContent=text;}
+function nextTask(){return seasonTasks(st.season).find(t=>!st.done[t.id])||null;}
+function stopDist(p){return(p.r||2.5)+1.6;}
+function hideGuide(){guide.leader.visible=false;for(const m of guide.trail){m.on=false;m.z.visible=false;}guide.say=null;guide.sayT=0;guide.mode=null;guide.arrived=false;bubbleEl.hidden=true;}
+function refreshGuide(){
+  hideGuide();
+  const t=st.mode==='roam'?nextTask():null;guide.task=t;if(!t)return;
+  const p=PLACES[t.place],hx=hero.position.x,hz=hero.position.z,D=Math.hypot(p.x-hx,p.z-hz),L=D-stopDist(p);
+  if(L<3)return;
+  const dx=(p.x-hx)/D,dz=(p.z-hz)/D,ice=st.season===3;
+  cam.yaw+=angDiff(Math.atan2(-dx,-dz)+0.32,cam.yaw);   // turn the eye toward the way to go
+  if(seasonTasks(st.season).indexOf(t)===0){
+    guide.mode='lead';const z=guide.leader,a=Math.min(4.5,L),[x,zz]=collide(hx+dx*a,hz+dz*a,0.4,ice);
+    z.position.set(x,0,zz);z.visible=true;pose(z,false);guide.heading=Math.atan2(-dx,-dz);guide.greet=true;guide.waitT=0;
+  }else{
+    guide.mode='trail';let k=0;
+    for(let s=L;s>3&&k<guide.trail.length;s-=6.5,k++){const m=guide.trail[k],o=k%2?0.9:-0.9,[x,zz]=collide(hx+dx*s-dz*o,hz+dz*s+dx*o,0.45,ice);
+      m.on=true;m.seen=false;m.hop=0;m.last=k===0;m.z.visible=true;m.z.position.set(x,0,zz);m.z.rotation.y=Math.atan2(-dx,-dz)+rr(-0.4,0.4);pose(m.z,true);}
+    if(k)zsay(guide.trail[k-1].z,'TUDY, VENDULKO!',4.5);
+  }
+}
+function stepGuide(dt,time){
+  const roam=st.mode==='roam';
+  if(guide.mode==='lead'){
+    const z=guide.leader,u=z.userData;z.visible=roam;
+    if(roam){
+      const p=PLACES[guide.task.place],stop=stopDist(p),ice=st.season===3;
+      let dx=p.x-z.position.x,dz=p.z-z.position.z;const dP=Math.hypot(dx,dz)||1;dx/=dP;dz/=dP;
+      const hx=hero.position.x-z.position.x,hz=hero.position.z-z.position.z,dH=Math.hypot(hx,hz);
+      const heroAhead=Math.hypot(p.x-hero.position.x,p.z-hero.position.z)<dP-0.5;
+      let moving=false;
+      if(dP>stop&&(dH<6.5||heroAhead)){
+        const sp=heroAhead?8.5:5.4,ox=z.position.x,oz=z.position.z;
+        let[nx,nz]=collide(ox+dx*sp*dt,oz+dz*sp*dt,0.38,ice);
+        if(Math.hypot(nx-ox,nz-oz)<sp*dt*0.3)[nx,nz]=collide(ox-dz*sp*dt,oz+dx*sp*dt,0.38,ice);
+        z.position.x=nx;z.position.z=nz;moving=true;if(guide.waitT>0)guide.waitT=0;
+        guide.heading+=angDiff(Math.atan2(dx,dz),guide.heading)*Math.min(1,dt*10);
+      }else{
+        guide.heading+=angDiff(Math.atan2(hx,hz),guide.heading)*Math.min(1,dt*6);guide.waitT+=dt;
+        if(dP<=stop){if(!guide.arrived&&dH<6){guide.arrived=true;zsay(z,'TADY TO JE!',3.5);sfx('ok');}}
+        else if(guide.waitT>(guide.greet?0.8:2.5)){guide.greet=false;guide.waitT=-4.5;zsay(z,'POBĚŽ ZA MNOU!',3.2);sfx('pop');}
+      }
+      guide.ph+=dt*(moving?12:3);
+      z.position.y=Math.abs(Math.sin(guide.ph))*(moving?0.32:0.03);z.rotation.y=guide.heading;
+      const s=moving?Math.sin(guide.ph):0;u.legL.rotation.x=s*0.8;u.legR.rotation.x=-s*0.8;
+      u.earL.rotation.x=u.earR.rotation.x=moving?-0.5-Math.abs(s)*0.5:Math.sin(time*2)*0.06;
+      u.armR.rotation.z=guide.sayT>0&&!moving?2.6+Math.sin(time*9)*0.35:0.25;
+    }
+  }else if(guide.mode==='trail'){
+    for(const m of guide.trail){
+      if(!m.on)continue;m.z.visible=roam;if(!roam)continue;
+      const d=Math.hypot(hero.position.x-m.z.position.x,hero.position.z-m.z.position.z),u=m.z.userData;
+      if(!m.seen&&d<2.4){m.seen=true;m.hop=0.8;zsay(m.z,m.last?'TADY TO JE!':pick(['JDEŠ SPRÁVNĚ!','JEŠTĚ KOUSEK!','TUDY, VENDULKO!']),2.4);sfx('pop');}
+      if(m.hop>0){m.hop-=dt;m.z.position.y=Math.abs(Math.sin(m.hop*8))*0.3*Math.max(0,m.hop);}else m.z.position.y=0;
+      u.earL.rotation.x=u.earR.rotation.x=Math.sin(time*1.6+m.z.position.x)*0.07;u.head.rotation.z=Math.sin(time*1.1+m.z.position.z)*0.06;
+    }
+  }
+  // the speech bubble floats over whoever is speaking
+  if(guide.sayT>0&&roam&&guide.say){
+    guide.sayT-=dt;_v.copy(guide.say.obj.position);_v.y+=guide.say.obj===guide.leader?1.65:1.2;_v.project(camera);
+    const show=_v.z<1&&Math.abs(_v.x)<1.05&&Math.abs(_v.y)<1.05;bubbleEl.hidden=!show;
+    if(show){bubbleEl.style.left=((_v.x+1)/2*window.innerWidth)+'px';bubbleEl.style.top=((1-_v.y)/2*window.innerHeight)+'px';}
+  }else if(!bubbleEl.hidden)bubbleEl.hidden=true;
 }
 
 /* ---------- walking and the camera ---------- */
@@ -422,6 +496,7 @@ async function runTask(task){
   refreshProps();refreshMarkers();updateHud();save();
   try{
     if(first){sfx('star');nudgeJournal();await say('MÁŠ NOVÝ ZÁPIS V DENÍKU: '+task.title);await progress();}
+    if(guide.mode==='trail'&&!st.seen.trail){st.seen.trail=1;save();await say('K DALŠÍMU ÚKOLU VEDOU ZAJDÍCI. JDI OD JEDNOHO K DRUHÉMU.');}
   }catch(e){if(e!==CANCEL)console.error(e);}
   busy=false;
 }
@@ -437,6 +512,7 @@ async function changeSeason(s){
   if(s===st.season)return;
   const a=st.season;let swapped=false;st.season=s;sfx('season');updateHud();
   for(const k in markers)markers[k].visible=false;
+  hideGuide();
   await tw(2.6,k=>{paintSeason(a,s,k);if(k>0.5&&!swapped){swapped=true;refreshProps();}},true);
   refreshMarkers();save();
   if(!st.seen['s'+s]){st.seen['s'+s]=1;save();updateHud();nudgeJournal();await say(SEASON_PAGES[s]);}
@@ -455,13 +531,14 @@ $('btnReset').onclick=()=>{if(!resetArmed){resetArmed=true;$('btnReset').textCon
 
 /* ---------- start ---------- */
 async function start(){
-  $('title').hidden=true;$('hud').hidden=false;st.mode='roam';sfx('pop');
+  $('title').hidden=true;$('hud').hidden=false;st.mode='roam';sfx('pop');refreshGuide();
   if(st.seen.intro)return;
   busy=true;
   try{
     await say('AHOJ, VENDULKO! NAŠLA JSI V LESE STARÝ DENÍK.');
     await say('DENÍK JE PRÁZDNÝ. ZAPIŠ DO NĚJ, CO V LESE OBJEVÍŠ.');
-    await say('KLIKNI NEBO ŤUKNI NA ZEM A DOJDEŠ TAM. HLEDEJ SLOUPY SVĚTLA MEZI STROMY!');
+    await say('KLIKNI NEBO ŤUKNI NA ZEM A DOJDEŠ TAM.');
+    await say('KRÁLÍČEK ZAJDÍK TĚ DOVEDE K ÚKOLU. BĚŽ ZA NÍM!');
     st.seen.intro=1;st.seen['s'+st.season]=1;save();updateHud();nudgeJournal();
     await say(SEASON_PAGES[st.season]);
   }catch(e){if(e!==CANCEL)console.error(e);}
@@ -476,6 +553,7 @@ function frame(now){
   const raw=(now-last)/1000;last=now;const dt=Math.min(raw,0.05)*(window.__fast||1);time+=dt;
   stepTweens(dt);
   stepHero(dt,time);
+  stepGuide(dt,time);
   if(st.mode==='title'){cam.yaw=Math.sin(time*0.12)*0.5;}
   stepCamera(dt,false);
   updateWeather(dt,time,camera.position.x,camera.position.z);
@@ -503,4 +581,4 @@ refreshProps();refreshMarkers();updateHud();
 stepCamera(0,true);
 requestAnimationFrame(frame);
 $('btnPlay').disabled=false;$('btnPlay').textContent='HRÁT';
-window.__les={st,TASKS,hero,cam,runTask,changeSeason,get correct(){return correctNow;},get busy(){return busy;}};
+window.__les={st,TASKS,hero,cam,guide,walk,refreshMarkers,runTask,changeSeason,get correct(){return correctNow;},get busy(){return busy;}};

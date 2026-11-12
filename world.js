@@ -406,6 +406,31 @@ function makeFrog(){const g=new THREE.Group(),F='#5aa53a';
   part(g,G_SPH,F,0,0.09,0,0.13,0.085,0.15);part(g,G_SPH,'#cfe58a',0,0.06,0.07,0.09,0.05,0.08);
   for(const x of[-0.065,0.065]){part(g,G_SPH,F,x,0.17,0.07,0.045);part(g,G_SPH,'#15182a',x,0.18,0.105,0.02);
     part(g,G_SPH,'#4a8f30',x*2.2,0.05,-0.06,0.06,0.045,0.09);}return g;}
+/* Zajdík: a soft long-eared plush rabbit with a red ribbon, who shows the way */
+function makeZajdik(){
+  const g=new THREE.Group(),inner=new THREE.Group();g.add(inner);
+  const F='#a9c8c1',L='#c6d9cf',N='#d8a994',INK='#4a4640';
+  const limb=(x,y,r,len,foot)=>{const p=new THREE.Group();p.position.set(x,y,0);inner.add(p);part(p,G_CYL,F,0,-len/2,0,r,len,r);
+    if(foot)part(p,G_SPH,F,0,-len-0.01,0.035,0.05,0.04,0.085);else part(p,G_SPH,F,0,-len,0,r*1.25);return p;};
+  const legL=limb(-0.065,0.4,0.032,0.36,true),legR=limb(0.065,0.4,0.032,0.36,true);
+  part(inner,G_SPH,F,0,0.52,0,0.13,0.17,0.115);
+  part(inner,G_SPH,L,0,0.5,0.045,0.095,0.13,0.085);
+  part(inner,G_SPH,L,0,0.44,-0.11,0.045);
+  const armL=limb(-0.13,0.62,0.027,0.3,false),armR=limb(0.13,0.62,0.027,0.3,false);armL.rotation.z=-0.25;armR.rotation.z=0.25;
+  const head=new THREE.Group();head.position.set(0,0.78,0.01);inner.add(head);
+  part(head,G_SPH,F,0,0,0,0.125,0.12,0.115);
+  part(head,G_SPH,L,0,-0.03,0.085,0.07,0.055,0.05);
+  part(head,G_SPH,N,0,0,0.125,0.028,0.022,0.018);
+  for(const x of[-0.055,0.055]){const e=part(head,G_SPH,INK,x,0.03,0.105,0.024,0.006,0.008);e.rotation.z=x<0?0.25:-0.25;}
+  part(head,G_SPH,INK,0,-0.055,0.128,0.03,0.005,0.006);
+  const ear=x=>{const p=new THREE.Group();p.position.set(x,0.08,-0.02);head.add(p);part(p,G_SPH,F,0,-0.2,0,0.048,0.21,0.03);part(p,G_SPH,L,0,-0.2,0.012,0.03,0.16,0.022);p.rotation.z=x<0?-0.35:0.35;return p;};
+  const earL=ear(-0.075),earR=ear(0.075);
+  const rb=new THREE.Mesh(new THREE.TorusGeometry(0.075,0.022,8,16),fm('#d8402f'));rb.rotation.x=Math.PI/2;rb.position.y=0.675;inner.add(rb);
+  const tail=part(inner,G_BOX,'#d8402f',0.07,0.62,0.09,0.035,0.11,0.012);tail.rotation.z=-0.3;
+  g.add(blob(0.55));
+  g.userData={inner,legL,legR,armL,armR,earL,earR,head};
+  return g;
+}
 const ITEM={
   stone(s){const g=new THREE.Group();const m=part(g,G_ROCK,'#8d8f98',0,0,0,0.2*s,0.15*s,0.17*s);m.material=ITEM._rock;return g;},
   stick(){const g=new THREE.Group();const m=part(g,G_CYL,'#8a6244',0,0,0,0.03,0.6,0.03);m.rotation.z=Math.PI/2;const t=part(g,G_CYL,'#8a6244',0.12,0.05,0,0.02,0.16,0.02);t.rotation.z=0.7;return g;},

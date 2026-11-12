@@ -21,6 +21,11 @@ Skripty jsou klasické (ne moduly) a sdílejí globální proměnné v pořadí 
 - Každý úkol je `async` funkce; odchod z úkolu ji ruší přes `cancelFlow()`.
 - Nový úkol: funkce `tNeco`, záznam v `TASKS` (období, místo, text do deníku), případně rekvizity ve `world.js` a jejich viditelnost v `refreshProps()`.
 
+## Zajdík, průvodce
+- Plyšový králíček podle dceřiny hračky (jméno Zajdík). Model `makeZajdik()` ve `world.js` je zjednodušená vlastní figurka z koulí a válců, s červenou mašlí.
+- Logika v `game.js` (`guide`, `refreshGuide`, `stepGuide`): u prvního nesplněného úkolu období běží jeden Zajdík před Vendulkou, čeká na ni a volá „POBĚŽ ZA MNOU!“; u druhého úkolu sedí Zajdíci podél cesty jako fáborky a při doběhnutí poskočí.
+- Bublina s textem je HTML prvek `#bubble` umístěný promítnutím 3D pozice na obrazovku.
+
 ## Testování
 - `window.__les` zpřístupňuje stav (`st`, `TASKS`, `runTask`, `changeSeason`, `correct`).
 - `window.__fast = 10` zrychlí čas hry, hodí se pro automatický průchod.

@@ -46,6 +46,11 @@ button:focus-visible{outline:4px solid var(--teal);outline-offset:3px}
   border-radius:20px;padding:.3em 1em;font-weight:800;font-size:clamp(22px,3vw,38px);letter-spacing:.04em;
   font-variant-numeric:tabular-nums;white-space:nowrap}
 
+#bubble{position:fixed;left:0;top:0;transform:translate(-50%,-100%);background:var(--paper);border:3px solid var(--ink);border-radius:18px;
+  box-shadow:0 4px 0 rgba(27,39,69,.5);padding:.3em .7em;font-weight:800;letter-spacing:.04em;line-height:1.1;font-size:clamp(17px,2.1vw,28px);
+  white-space:nowrap;pointer-events:none}
+#bubble::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:var(--paper);border-right:3px solid var(--ink);
+  border-bottom:3px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
 #dock{position:fixed;left:0;right:0;bottom:0;padding:0 16px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none}
 #dock > *{pointer-events:auto}
 #btnExplore{background:var(--gold);font-size:clamp(20px,2.6vw,32px);padding:.55em 1.2em;animation:bob 1.4s ease-in-out infinite}
@@ -122,6 +127,7 @@ button:focus-visible{outline:4px solid var(--teal);outline-offset:3px}
 </div>
 
 <div id="quest" hidden></div>
+<div id="bubble" hidden></div>
 
 <div id="dock">
   <button class="pill" id="btnBack" hidden>ZPĚT DO LESA</button>
